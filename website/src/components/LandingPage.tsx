@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Image from "next/image";
 import { defaultSiteContent, defaultSponsors, type SiteContent, type SponsorLogo } from "@/lib/siteContent";
 import { SectionShell, CardGrid } from "@/components/ui/SectionHelpers";
@@ -118,7 +118,7 @@ function SponsorGrid({ content, sponsors }: { content: SiteContent; sponsors: Sp
             return (
               <div
                 key={sponsor.id}
-                className="group flex min-h-28 items-center justify-center rounded-2xl border border-white/5 bg-black/25 p-6 transition duration-300 hover:-translate-y-1 hover:border-white/15 hover:bg-white/[0.04]"
+                className="group flex min-h-28 items-center justify-center rounded-2xl border border-white/5 bg-black/25 p-6 backdrop-blur-sm transition duration-300 hover:-translate-y-1 hover:border-white/15 hover:bg-white/[0.04]"
               >
                 {sponsor.href ? (
                   <a href={sponsor.href} target="_blank" rel="noreferrer" aria-label={sponsor.name}>
@@ -143,6 +143,28 @@ function SponsorGrid({ content, sponsors }: { content: SiteContent; sponsors: Sp
 export default function LandingPage({ initialContent = defaultSiteContent, initialSponsors = defaultSponsors }: Props) {
   const [content, setContent] = useState(initialContent);
   const [sponsors, setSponsors] = useState(initialSponsors);
+  const [email, setEmail] = useState("");
+  const [waitlistStatus, setWaitlistStatus] = useState<"idle" | "pending" | "success" | "error">("idle");
+
+  async function submitWaitlist(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setWaitlistStatus("pending");
+    try {
+      const res = await fetch("/api/notify/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (res.ok) {
+        setWaitlistStatus("success");
+        setEmail("");
+      } else {
+        setWaitlistStatus("error");
+      }
+    } catch {
+      setWaitlistStatus("error");
+    }
+  }
 
   useEffect(() => {
     if (!dynamicEnabled) return;
@@ -206,7 +228,7 @@ export default function LandingPage({ initialContent = defaultSiteContent, initi
       <SectionShell id="roadmap" eyebrow="roadmap" headline={section.roadmap.headline}>
         <div className="grid gap-4 md:grid-cols-3">
           {section.roadmap.phases.map((phase) => (
-            <article key={phase.title} className="rounded-2xl border border-white/10 bg-black/35 p-6">
+            <article key={phase.title} className="rounded-2xl border border-white/10 bg-black/35 p-6 backdrop-blur-sm">
               <h3 className="text-xl font-semibold text-white">{phase.title}</h3>
               <ul className="mt-6 space-y-3">
                 {phase.items.map((item) => (
@@ -231,22 +253,41 @@ export default function LandingPage({ initialContent = defaultSiteContent, initi
               <p key={line}>{line}</p>
             ))}
           </div>
-          <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
-            <a
-              href="mailto:hello@solwear.tech?subject=SolWear%20waitlist"
-              className="focus-ring inline-flex min-h-12 items-center justify-center rounded-full bg-white px-7 py-3 text-sm font-semibold text-black transition hover:bg-white/90"
-            >
-              {section.finalCta.primaryButton}
-            </a>
-            <a
-              href={content.links.xHref}
-              target="_blank"
-              rel="noreferrer"
-              className="focus-ring inline-flex min-h-12 items-center justify-center rounded-full border border-white/15 px-7 py-3 text-sm font-semibold text-white/82 transition hover:border-white/35 hover:text-white"
-            >
-              {section.finalCta.secondaryButton}
-            </a>
-          </div>
+          {waitlistStatus === "success" ? (
+            <div className="mt-9 rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.06] px-6 py-5">
+              <p className="text-sm font-semibold text-emerald-200">You&apos;re on the list.</p>
+              <p className="mt-1 text-xs text-white/50">We&apos;ll reach out when SolWear is ready.</p>
+            </div>
+          ) : (
+            <form onSubmit={submitWaitlist} className="mt-9 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com"
+                className="focus-ring min-h-12 w-full max-w-xs rounded-full border border-white/15 bg-white/[0.06] px-5 text-sm text-white placeholder-white/30 outline-none backdrop-blur-sm transition focus:border-white/35 sm:w-auto"
+              />
+              <button
+                type="submit"
+                disabled={waitlistStatus === "pending"}
+                className="focus-ring inline-flex min-h-12 items-center justify-center rounded-full bg-white px-7 text-sm font-semibold text-black transition hover:bg-white/90 disabled:opacity-60"
+              >
+                {waitlistStatus === "pending" ? "Joining…" : section.finalCta.primaryButton}
+              </button>
+              <a
+                href={content.links.xHref}
+                target="_blank"
+                rel="noreferrer"
+                className="focus-ring inline-flex min-h-12 items-center justify-center rounded-full border border-white/15 px-7 text-sm font-semibold text-white/82 transition hover:border-white/35 hover:text-white"
+              >
+                {section.finalCta.secondaryButton}
+              </a>
+            </form>
+          )}
+          {waitlistStatus === "error" && (
+            <p className="mt-3 text-xs text-red-400">Something went wrong — please try again.</p>
+          )}
           <p className="mt-9 text-sm text-white/45">{section.finalCta.footerLine}</p>
         </div>
       </section>

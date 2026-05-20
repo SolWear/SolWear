@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 
 const PDF_URL = "/pitch/solwear-pitch.pdf";
 const PPTX_URL = "/pitch/solwear-pitch.pptx";
-const PPTX_VIEWER = `https://view.officeapps.live.com/op/embed.aspx?src=https://solwear.tech/pitch/solwear-pitch.pptx`;
-const SLIDE_COUNT = 13;
+const PDF_VIEWER = "https://docs.google.com/viewer?url=https%3A%2F%2Fsolwear.tech%2Fpitch%2Fsolwear-pitch.pdf&embedded=true";
+const PPTX_VIEWER = "https://view.officeapps.live.com/op/embed.aspx?src=https%3A%2F%2Fsolwear.tech%2Fpitch%2Fsolwear-pitch.pptx";
 const dynamicEnabled = process.env.NEXT_PUBLIC_SOLWEAR_DYNAMIC === "1";
 
 type DeckTab = "pdf" | "pptx";
@@ -32,10 +32,8 @@ function youtubeEmbedUrl(url: string): string | null {
 }
 
 export default function PitchPage() {
-  const [page, setPage] = useState(1);
   const [deckTab, setDeckTab] = useState<DeckTab>("pdf");
   const [pitchVideoUrl, setPitchVideoUrl] = useState("");
-  const pdfSrc = useMemo(() => `${PDF_URL}#page=${page}&view=FitH`, [page]);
   const embed = youtubeEmbedUrl(pitchVideoUrl);
 
   useEffect(() => {
@@ -96,7 +94,7 @@ export default function PitchPage() {
 
           <div className="overflow-hidden rounded-3xl border border-white/10 bg-black/50 shadow-2xl shadow-black/30">
             {/* Tab bar */}
-            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+            <div className="flex items-center border-b border-white/10 px-4 py-3">
               <div className="flex gap-1">
                 {(["pdf", "pptx"] as DeckTab[]).map((t) => (
                   <button
@@ -104,45 +102,18 @@ export default function PitchPage() {
                     type="button"
                     onClick={() => setDeckTab(t)}
                     className={`rounded-full px-4 py-1.5 text-xs font-medium transition ${
-                      deckTab === t
-                        ? "bg-white text-black"
-                        : "text-white/50 hover:text-white"
+                      deckTab === t ? "bg-white text-black" : "text-white/50 hover:text-white"
                     }`}
                   >
                     {t === "pdf" ? "PDF viewer" : "Presentation (PPTX)"}
                   </button>
                 ))}
               </div>
-
-              {deckTab === "pdf" && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-white/45">
-                    Slide <span className="font-semibold text-white">{page}</span> of {SLIDE_COUNT}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                    className="focus-ring min-h-9 rounded-full border border-white/15 px-3 text-sm text-white/70 disabled:opacity-35"
-                  >
-                    &#8592;
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPage((p) => Math.min(SLIDE_COUNT, p + 1))}
-                    disabled={page === SLIDE_COUNT}
-                    className="focus-ring min-h-9 rounded-full border border-white/15 px-3 text-sm text-white/70 disabled:opacity-35"
-                  >
-                    &#8594;
-                  </button>
-                </div>
-              )}
             </div>
 
             {deckTab === "pdf" ? (
               <iframe
-                key={pdfSrc}
-                src={pdfSrc}
+                src={PDF_VIEWER}
                 title="SolWear pitch deck"
                 className="h-[72vh] w-full bg-white"
               />

@@ -38,8 +38,29 @@ type Tab = "ideas" | "made";
 
 const dynamicEnabled = process.env.NEXT_PUBLIC_SOLWEAR_DYNAMIC === "1";
 
+const MEDALS = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"];
+
+function Leaderboard({ ideas }: { ideas: Idea[] }) {
+  if (ideas.length < 3) return null;
+  return (
+    <div className="mb-8 rounded-2xl border border-white/10 bg-black/30 p-4 backdrop-blur-sm">
+      <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-white/40">Top ideas</p>
+      <div className="flex flex-col gap-2">
+        {ideas.map((idea, i) => (
+          <div key={idea.id} className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.03] px-4 py-2.5">
+            <span className="text-lg leading-none">{MEDALS[i]}</span>
+            <p className="flex-1 truncate text-sm text-white/80">{idea.idea}</p>
+            <span className="shrink-0 text-xs font-semibold text-white/40">+{idea.votes}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function PinboardPage() {
   const [ideas, setIdeas] = useState<Idea[]>([]);
+  const [topIdeas, setTopIdeas] = useState<Idea[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [quota, setQuota] = useState<Quota>({ submitted: 0, remaining: 0 });
   const [maxIdeas, setMaxIdeas] = useState(1);
@@ -97,6 +118,11 @@ export default function PinboardPage() {
     setOffset(0);
     setHasMore(false);
     loadIdeas(0, tab, true);
+    // Fetch leaderboard once on mount (tab doesn't affect it)
+    fetch("/api/pinboard/?sort=top&limit=5")
+      .then((r) => r.json())
+      .then((d) => setTopIdeas(d.ideas || []))
+      .catch(() => {});
   }, [tab]);
 
   async function loadIdeas(fromOffset: number, currentTab: Tab, replace: boolean) {
@@ -301,6 +327,8 @@ export default function PinboardPage() {
             </div>
           )}
 
+          {tab === "ideas" && <Leaderboard ideas={topIdeas} />}
+
           <div className="mt-6 min-h-[520px] border border-white/10 bg-[linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:32px_32px] p-4 md:p-8">
             {boardIdeas.length === 0 && dynamicEnabled ? (
               <p className="text-sm text-white/40">No ideas yet.</p>
@@ -310,7 +338,11 @@ export default function PinboardPage() {
                   <article
                     key={item.id}
                     className="relative min-h-40 border border-white/10 bg-white p-5 text-black shadow-[0_18px_40px_rgba(0,0,0,0.28)]"
-                    style={{ transform: `rotate(${[-1.2, 0.8, -0.4, 1.1, -0.8][index % 5]}deg)` }}
+                    style={{
+                      transform: `rotate(${[-1.2, 0.8, -0.4, 1.1, -0.8][index % 5]}deg)`,
+                      animation: `card-fade-up 0.4s ease both`,
+                      animationDelay: `${Math.min(index * 40, 400)}ms`,
+                    }}
                   >
                     {user?.isAdmin && (
                       <div className="mb-3 flex flex-wrap gap-1">

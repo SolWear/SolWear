@@ -17,6 +17,8 @@ const topLinks: NavLink[] = [
   { label: "Achievements", href: "/achievements/" },
 ];
 
+const dynamicEnabled = process.env.NEXT_PUBLIC_SOLWEAR_DYNAMIC === "1";
+
 export default function Nav() {
   const [visible, setVisible] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -29,25 +31,18 @@ export default function Nav() {
   useEffect(() => {
     const onScroll = () => {
       const y = window.scrollY;
-      if (y < 60) {
-        setVisible(true);
-      } else {
-        setVisible(y < lastY.current);
-      }
+      setVisible(y < 60 || y < lastY.current);
       lastY.current = y;
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Close dropdown on outside click
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
       if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node) &&
-        exploreButtonRef.current &&
-        !exploreButtonRef.current.contains(e.target as Node)
+        dropdownRef.current && !dropdownRef.current.contains(e.target as Node) &&
+        exploreButtonRef.current && !exploreButtonRef.current.contains(e.target as Node)
       ) {
         setExploreOpen(false);
       }
@@ -56,16 +51,11 @@ export default function Nav() {
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
-  const scrollTo = (href: string) => {
+  const navigate = (href: string) => {
     setMenuOpen(false);
     setExploreOpen(false);
     setMobileExploreOpen(false);
-    if (href.startsWith("/")) {
-      window.location.href = href;
-      return;
-    }
-    const el = document.querySelector(href);
-    if (el) el.scrollIntoView({ behavior: "smooth" });
+    window.location.href = href;
   };
 
   return (
@@ -74,24 +64,19 @@ export default function Nav() {
         visible ? "translate-y-0" : "-translate-y-full"
       }`}
     >
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-6">
-        {/* Logo */}
-        <button
-          onClick={() => scrollTo("#product")}
+      <div className="mx-auto flex h-16 max-w-7xl items-center px-6">
+        {/* Logo — always navigates to home */}
+        <a
+          href="/"
           className="focus-ring flex min-h-10 shrink-0 items-center gap-2 text-white transition hover:text-white/82"
+          aria-label="SolWear home"
         >
-          <Image
-            src="/solwear-logo-white.webp"
-            alt="SolWear"
-            width={22}
-            height={22}
-            priority
-          />
+          <Image src="/solwear-logo-white.webp" alt="SolWear" width={22} height={22} priority />
           <span className="text-sm font-semibold">SolWear</span>
-        </button>
+        </a>
 
-        {/* Desktop nav */}
-        <ul className="hidden items-center gap-6 lg:flex">
+        {/* Center nav — absolute positioned to truly center on desktop */}
+        <ul className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-6 lg:flex">
           {/* Explore dropdown */}
           <li className="relative">
             <button
@@ -103,102 +88,104 @@ export default function Nav() {
               Explore
               <svg
                 className={`h-3.5 w-3.5 transition-transform duration-200 ${exploreOpen ? "rotate-180" : ""}`}
-                viewBox="0 0 12 12"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
+                viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8"
               >
                 <path d="M2 4l4 4 4-4" />
               </svg>
             </button>
 
-            {exploreOpen && (
-              <div
-                ref={dropdownRef}
-                onMouseLeave={() => setExploreOpen(false)}
-                className="absolute left-0 top-full mt-2 min-w-[180px] rounded-2xl border border-white/10 bg-black/90 p-1.5 shadow-2xl shadow-black/50 backdrop-blur-xl"
-              >
-                {exploreLinks.map((l) => (
-                  <button
-                    key={l.label}
-                    onClick={() => scrollTo(l.href)}
-                    className="focus-ring flex w-full items-center rounded-xl px-3.5 py-2.5 text-sm text-white/65 transition hover:bg-white/8 hover:text-white"
-                  >
-                    {l.label}
-                  </button>
-                ))}
-              </div>
-            )}
+            {/* Animated dropdown */}
+            <div
+              ref={dropdownRef}
+              onMouseLeave={() => setExploreOpen(false)}
+              className={`absolute left-0 top-full mt-2 min-w-[180px] overflow-hidden rounded-2xl border border-white/10 bg-black/90 p-1.5 shadow-2xl shadow-black/50 backdrop-blur-xl transition-all duration-200 origin-top ${
+                exploreOpen
+                  ? "pointer-events-auto translate-y-0 scale-y-100 opacity-100"
+                  : "pointer-events-none -translate-y-1 scale-y-95 opacity-0"
+              }`}
+            >
+              {exploreLinks.map((l) => (
+                <button
+                  key={l.label}
+                  onClick={() => navigate(l.href)}
+                  className="focus-ring flex w-full items-center rounded-xl px-3.5 py-2.5 text-sm text-white/65 transition hover:bg-white/8 hover:text-white"
+                >
+                  {l.label}
+                </button>
+              ))}
+            </div>
           </li>
 
-          {/* Top-level page links */}
           {topLinks.map((l) => (
             <li key={l.label}>
-              <button
-                onClick={() => scrollTo(l.href)}
+              <a
+                href={l.href}
                 className="focus-ring min-h-10 text-sm font-medium text-white/58 transition hover:text-white"
               >
                 {l.label}
-              </button>
+              </a>
             </li>
           ))}
         </ul>
 
-        {/* Right side */}
-        <div className="hidden items-center gap-3 lg:flex">
+        {/* Right-side actions */}
+        <div className="ml-auto hidden items-center gap-2 lg:flex">
+          {dynamicEnabled && (
+            <a
+              href="/api/auth/x1/start/?returnTo=/pinboard/"
+              className="focus-ring inline-flex min-h-10 items-center gap-1.5 rounded-full border border-white/10 px-4 text-sm font-medium text-white/65 transition hover:border-white/25 hover:text-white"
+            >
+              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z" />
+              </svg>
+              Sign in
+            </a>
+          )}
           <a
             href="/pinboard/"
             className="focus-ring inline-flex min-h-10 items-center rounded-full border border-white/10 px-4 text-sm font-medium text-white/65 transition hover:border-white/25 hover:text-white"
           >
-            Pinboard
+            Community
           </a>
-          <button
-            onClick={() => scrollTo("#waitlist")}
+          <a
+            href="/#waitlist"
             className="focus-ring inline-flex min-h-10 items-center rounded-full bg-white px-5 text-sm font-semibold text-black transition hover:bg-white/90"
           >
             Join waitlist
-          </button>
+          </a>
         </div>
 
         {/* Hamburger */}
         <button
-          className="focus-ring flex h-10 w-10 flex-col items-center justify-center gap-1.5 rounded-full border border-white/10 lg:hidden"
+          className="focus-ring ml-auto flex h-10 w-10 flex-col items-center justify-center gap-1.5 rounded-full border border-white/10 lg:hidden"
           onClick={() => setMenuOpen(!menuOpen)}
           aria-label="Toggle menu"
           aria-expanded={menuOpen}
         >
-          <span className={`block w-5 h-px bg-white transition-all duration-300 ${menuOpen ? "rotate-45 translate-y-[7px]" : ""}`} />
-          <span className={`block w-5 h-px bg-white transition-all duration-300 ${menuOpen ? "opacity-0" : ""}`} />
-          <span className={`block w-5 h-px bg-white transition-all duration-300 ${menuOpen ? "-rotate-45 -translate-y-[7px]" : ""}`} />
+          <span className={`block h-px w-5 bg-white transition-all duration-300 ${menuOpen ? "rotate-45 translate-y-[7px]" : ""}`} />
+          <span className={`block h-px w-5 bg-white transition-all duration-300 ${menuOpen ? "opacity-0" : ""}`} />
+          <span className={`block h-px w-5 bg-white transition-all duration-300 ${menuOpen ? "-rotate-45 -translate-y-[7px]" : ""}`} />
         </button>
       </div>
 
       {/* Mobile menu */}
       {menuOpen && (
         <div className="flex flex-col gap-1 border-t border-white/10 px-4 py-3 lg:hidden">
-          {/* Explore accordion */}
           <button
             onClick={() => setMobileExploreOpen((o) => !o)}
             className="focus-ring flex min-h-10 items-center justify-between rounded-xl px-2 text-sm font-medium text-white/70 transition hover:text-white"
           >
             Explore
-            <svg
-              className={`h-3.5 w-3.5 transition-transform duration-200 ${mobileExploreOpen ? "rotate-180" : ""}`}
-              viewBox="0 0 12 12"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-            >
+            <svg className={`h-3.5 w-3.5 transition-transform duration-200 ${mobileExploreOpen ? "rotate-180" : ""}`} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8">
               <path d="M2 4l4 4 4-4" />
             </svg>
           </button>
-
           {mobileExploreOpen && (
             <div className="ml-3 flex flex-col gap-0.5 border-l border-white/10 pl-3">
               {exploreLinks.map((l) => (
                 <button
                   key={l.label}
-                  onClick={() => scrollTo(l.href)}
+                  onClick={() => navigate(l.href)}
                   className="focus-ring min-h-9 text-left text-sm text-white/55 transition hover:text-white"
                 >
                   {l.label}
@@ -206,29 +193,22 @@ export default function Nav() {
               ))}
             </div>
           )}
-
           {topLinks.map((l) => (
-            <button
-              key={l.label}
-              onClick={() => scrollTo(l.href)}
-              className="focus-ring min-h-10 rounded-xl px-2 text-left text-sm font-medium text-white/70 transition hover:text-white"
-            >
+            <a key={l.label} href={l.href} className="focus-ring min-h-10 rounded-xl px-2 text-sm font-medium text-white/70 transition hover:text-white">
               {l.label}
-            </button>
+            </a>
           ))}
-
-          <a
-            className="focus-ring min-h-10 rounded-xl px-2 text-sm font-medium text-white/70 transition hover:text-white"
-            href="/pinboard/"
-          >
-            Pinboard
+          <a href="/pinboard/" className="focus-ring min-h-10 rounded-xl px-2 text-sm font-medium text-white/70 transition hover:text-white">
+            Community
           </a>
-          <button
-            onClick={() => scrollTo("#waitlist")}
-            className="focus-ring min-h-10 rounded-xl px-2 text-left text-sm font-medium text-white/70 transition hover:text-white"
-          >
+          {dynamicEnabled && (
+            <a href="/api/auth/x1/start/?returnTo=/pinboard/" className="focus-ring min-h-10 rounded-xl px-2 text-sm font-medium text-white/70 transition hover:text-white">
+              Sign in with X
+            </a>
+          )}
+          <a href="/#waitlist" className="focus-ring min-h-10 rounded-xl px-2 text-sm font-medium text-white/70 transition hover:text-white">
             Join waitlist
-          </button>
+          </a>
         </div>
       )}
     </nav>
