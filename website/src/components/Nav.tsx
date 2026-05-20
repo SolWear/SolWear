@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
 
 type NavLink = { label: string; href: string };
@@ -24,9 +24,39 @@ export default function Nav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [exploreOpen, setExploreOpen] = useState(false);
   const [mobileExploreOpen, setMobileExploreOpen] = useState(false);
+  const [logoGlowing, setLogoGlowing] = useState(false);
+  const [fillOverlay, setFillOverlay] = useState<{ x: number; y: number } | null>(null);
   const lastY = useRef(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const exploreButtonRef = useRef<HTMLButtonElement>(null);
+  const logoRef = useRef<HTMLButtonElement>(null);
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const holdStarted = useRef(false);
+
+  const cancelHold = useCallback(() => {
+    if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null; }
+    holdStarted.current = false;
+  }, []);
+
+  const onLogoDown = useCallback(() => {
+    holdStarted.current = true;
+    setLogoGlowing(true);
+    holdTimer.current = setTimeout(() => {
+      if (!holdStarted.current) return;
+      const rect = logoRef.current?.getBoundingClientRect();
+      const cx = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
+      const cy = rect ? rect.top + rect.height / 2 : 32;
+      setFillOverlay({ x: cx, y: cy });
+      setTimeout(() => { window.location.href = "/"; }, 900);
+    }, 5000);
+  }, []);
+
+  const onLogoUp = useCallback(() => {
+    if (!holdStarted.current) return;
+    cancelHold();
+    setLogoGlowing(false);
+    window.location.href = "/";
+  }, [cancelHold]);
 
   useEffect(() => {
     const onScroll = () => {
@@ -60,20 +90,31 @@ export default function Nav() {
 
   return (
     <nav
-      className={`fixed left-0 right-0 top-0 z-50 border-b border-white/10 bg-black/62 backdrop-blur-xl transition-transform duration-300 motion-reduce:transition-none ${
+      className={`fixed left-0 right-0 top-0 z-50 border-b border-white/10 bg-black/80 backdrop-blur-xl transition-transform duration-300 motion-reduce:transition-none ${
         visible ? "translate-y-0" : "-translate-y-full"
       }`}
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center px-6">
-        {/* Logo — always navigates to home */}
-        <a
-          href="/"
-          className="focus-ring flex min-h-10 shrink-0 items-center gap-2 text-white transition hover:text-white/82"
+        {/* Logo — short press: home; hold 5s: light fills screen → home */}
+        <button
+          ref={logoRef}
+          onPointerDown={onLogoDown}
+          onPointerUp={onLogoUp}
+          onPointerLeave={cancelHold}
+          onPointerCancel={cancelHold}
+          className={`focus-ring flex min-h-10 shrink-0 select-none items-center gap-2 text-white transition hover:text-white/82 ${logoGlowing ? "animate-logo-glow" : ""}`}
           aria-label="SolWear home"
         >
           <Image src="/solwear-logo-white.webp" alt="SolWear" width={22} height={22} priority />
           <span className="text-sm font-semibold">SolWear</span>
-        </a>
+        </button>
+        {/* Full-screen light fill overlay (5s hold) */}
+        {fillOverlay && (
+          <div
+            className="pointer-events-none fixed inset-0 z-[9999] bg-white animate-logo-fill"
+            style={{ "--ox": `${fillOverlay.x}px`, "--oy": `${fillOverlay.y}px` } as React.CSSProperties}
+          />
+        )}
 
         {/* Center nav — absolute positioned to truly center on desktop */}
         <ul className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-6 lg:flex">
@@ -168,9 +209,13 @@ export default function Nav() {
         </button>
       </div>
 
-      {/* Mobile menu */}
-      {menuOpen && (
-        <div className="flex flex-col gap-1 border-t border-white/10 px-4 py-3 lg:hidden">
+      {/* Mobile menu — always rendered, animated with max-height */}
+      <div
+        className={`overflow-hidden border-white/10 transition-all duration-300 ease-in-out lg:hidden ${
+          menuOpen ? "max-h-[600px] border-t opacity-100" : "max-h-0 opacity-0 pointer-events-none"
+        }`}
+      >
+        <div className="flex flex-col gap-1 px-4 py-3">
           <button
             onClick={() => setMobileExploreOpen((o) => !o)}
             className="focus-ring flex min-h-10 items-center justify-between rounded-xl px-2 text-sm font-medium text-white/70 transition hover:text-white"
@@ -180,8 +225,9 @@ export default function Nav() {
               <path d="M2 4l4 4 4-4" />
             </svg>
           </button>
-          {mobileExploreOpen && (
-            <div className="ml-3 flex flex-col gap-0.5 border-l border-white/10 pl-3">
+          {/* Explore submenu — animated */}
+          <div className={`overflow-hidden transition-all duration-200 ease-in-out ${mobileExploreOpen ? "max-h-60 opacity-100" : "max-h-0 opacity-0 pointer-events-none"}`}>
+            <div className="ml-3 flex flex-col gap-0.5 border-l border-white/10 pl-3 pb-1">
               {exploreLinks.map((l) => (
                 <button
                   key={l.label}
@@ -192,7 +238,7 @@ export default function Nav() {
                 </button>
               ))}
             </div>
-          )}
+          </div>
           {topLinks.map((l) => (
             <a key={l.label} href={l.href} className="focus-ring min-h-10 rounded-xl px-2 text-sm font-medium text-white/70 transition hover:text-white">
               {l.label}
@@ -210,7 +256,7 @@ export default function Nav() {
             Join waitlist
           </a>
         </div>
-      )}
+      </div>
     </nav>
   );
 }

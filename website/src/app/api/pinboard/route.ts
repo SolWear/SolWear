@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/server/db";
 import { rateLimit } from "@/lib/server/rateLimit";
 import { createCsrfToken, getSession, verifyCsrfToken } from "@/lib/server/session";
+import { verifyTurnstile } from "@/lib/server/turnstile";
 
 export const runtime = "nodejs";
 
@@ -97,9 +98,6 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const session = getSession(request);
   if (!session) return NextResponse.json({ error: "Sign in with X first" }, { status: 401 });
-  if (!session.followsSolWear) {
-    return NextResponse.json({ error: "Follow @SolWear_ on X before posting" }, { status: 403 });
-  }
   if (!sameOrigin(request)) {
     return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
   }
@@ -115,7 +113,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Slow down before posting another idea" }, { status: 429 });
   }
 
-  const body = (await request.json().catch(() => null)) as { idea?: string } | null;
+  const body = (await request.json().catch(() => null)) as { idea?: string; turnstile?: string } | null;
+
+  const turnstileOk = await verifyTurnstile(body?.turnstile ?? "", ip);
+  if (!turnstileOk) {
+    return NextResponse.json({ error: "Captcha verification failed. Please try again." }, { status: 400 });
+  }
+
   const idea = cleanIdea(body?.idea);
   if (idea.length < 6) return NextResponse.json({ error: "Idea is too short" }, { status: 400 });
 

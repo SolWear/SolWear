@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { defaultSiteContent, defaultSponsors, type SiteContent, type SponsorLogo } from "@/lib/siteContent";
 import { SectionShell, CardGrid } from "@/components/ui/SectionHelpers";
@@ -31,21 +31,13 @@ function youtubeEmbedUrl(url: string): string | null {
   }
 }
 
-function Pill({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-white/70">
-      {children}
-    </span>
-  );
-}
-
 function HeroVisual({ content }: { content: SiteContent }) {
   const embed = youtubeEmbedUrl(content.hero.video.youtubeUrl);
 
   return (
     <div className="relative">
       <div className="absolute -inset-8 rounded-[2rem] bg-[radial-gradient(circle_at_82%_70%,rgba(20,241,149,0.12),transparent_34%)] blur-2xl" />
-      <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-black/45 p-5 shadow-2xl shadow-black/40 backdrop-blur-md">
+      <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-black/65 p-5 shadow-2xl shadow-black/40 backdrop-blur-md">
         <div className="relative min-h-[360px] overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.09),rgba(255,255,255,0.015))]">
           <Image
             src="/watch-hero.png"
@@ -55,7 +47,7 @@ function HeroVisual({ content }: { content: SiteContent }) {
             sizes="(min-width: 1024px) 45vw, 100vw"
             className="object-contain object-center p-8 opacity-90 drop-shadow-2xl"
           />
-          <div className="absolute inset-x-5 bottom-5 rounded-2xl border border-white/10 bg-black/70 p-5 backdrop-blur-md">
+          <div className="absolute inset-x-5 bottom-5 rounded-2xl border border-white/10 bg-black/88 p-5 backdrop-blur-md">
             <p className="text-xl font-semibold text-white">{content.hero.sideTitle}</p>
             <div className="mt-4 space-y-2 text-sm leading-6 text-white/65">
               {content.hero.sideLines.map((line) => (
@@ -118,7 +110,7 @@ function SponsorGrid({ content, sponsors }: { content: SiteContent; sponsors: Sp
             return (
               <div
                 key={sponsor.id}
-                className="group flex min-h-28 items-center justify-center rounded-2xl border border-white/5 bg-black/25 p-6 backdrop-blur-sm transition duration-300 hover:-translate-y-1 hover:border-white/15 hover:bg-white/[0.04]"
+                className="group flex min-h-28 items-center justify-center rounded-2xl border border-white/5 bg-black/45 p-6 backdrop-blur-sm transition duration-300 hover:-translate-y-1 hover:border-white/15 hover:bg-white/[0.06]"
               >
                 {sponsor.href ? (
                   <a href={sponsor.href} target="_blank" rel="noreferrer" aria-label={sponsor.name}>
@@ -140,11 +132,39 @@ function SponsorGrid({ content, sponsors }: { content: SiteContent; sponsors: Sp
   );
 }
 
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
+
 export default function LandingPage({ initialContent = defaultSiteContent, initialSponsors = defaultSponsors }: Props) {
   const [content, setContent] = useState(initialContent);
   const [sponsors, setSponsors] = useState(initialSponsors);
   const [email, setEmail] = useState("");
   const [waitlistStatus, setWaitlistStatus] = useState<"idle" | "pending" | "success" | "error">("idle");
+  const turnstileRef = useRef<HTMLDivElement>(null);
+  const turnstileTokenRef = useRef<string>("");
+
+  useEffect(() => {
+    if (!TURNSTILE_SITE_KEY || !turnstileRef.current) return;
+    // Load Turnstile script once
+    if (!document.getElementById("cf-turnstile-script")) {
+      const s = document.createElement("script");
+      s.id = "cf-turnstile-script";
+      s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+      s.async = true;
+      document.head.appendChild(s);
+    }
+    const interval = setInterval(() => {
+      if (typeof window !== "undefined" && (window as unknown as Record<string, unknown>).turnstile) {
+        clearInterval(interval);
+        (window as unknown as { turnstile: { render: (el: HTMLElement, opts: Record<string, unknown>) => void } }).turnstile.render(turnstileRef.current!, {
+          sitekey: TURNSTILE_SITE_KEY,
+          callback: (token: string) => { turnstileTokenRef.current = token; },
+          theme: "dark",
+          size: "compact",
+        });
+      }
+    }, 200);
+    return () => clearInterval(interval);
+  }, []);
 
   async function submitWaitlist(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -153,7 +173,7 @@ export default function LandingPage({ initialContent = defaultSiteContent, initi
       const res = await fetch("/api/notify/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, turnstile: turnstileTokenRef.current }),
       });
       if (res.ok) {
         setWaitlistStatus("success");
@@ -181,8 +201,8 @@ export default function LandingPage({ initialContent = defaultSiteContent, initi
 
   return (
     <main className="relative h-screen overflow-y-scroll [scroll-snap-type:y_mandatory]">
-      <section id="product" className="relative flex min-h-screen flex-col justify-center px-6 pb-16 pt-28 md:pb-24 md:pt-36 [scroll-snap-align:start]">
-        <div className="absolute inset-x-0 top-0 h-[1100px] bg-[radial-gradient(circle_at_78%_18%,rgba(20,241,149,0.12),transparent_28%),linear-gradient(180deg,rgba(5,5,5,0),#050505_86%)]" />
+      <section id="product" className="relative flex min-h-screen flex-col justify-center overflow-hidden px-6 pb-16 pt-28 md:pb-24 md:pt-36 [scroll-snap-align:start]">
+        <div className="absolute inset-x-0 top-0 h-full bg-[radial-gradient(circle_at_78%_18%,rgba(20,241,149,0.12),transparent_28%),linear-gradient(180deg,rgba(5,5,5,0),#050505_86%)]" />
         <div className="relative mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1.02fr_0.98fr] lg:items-center">
           <div>
             <h1 className="max-w-4xl whitespace-pre-line text-5xl font-semibold leading-[0.98] text-white md:text-7xl">
@@ -211,11 +231,9 @@ export default function LandingPage({ initialContent = defaultSiteContent, initi
                 Pitch
               </a>
             </div>
-            <div className="mt-7 flex flex-wrap gap-2">
-              {content.hero.badges.map((badge) => (
-                <Pill key={badge}>{badge}</Pill>
-              ))}
-            </div>
+            <p className="mt-6 text-xs tracking-widest text-white/25">
+              NFC · On-device signing · Solana Pay · Blinks
+            </p>
           </div>
           <HeroVisual content={content} />
         </div>
@@ -228,7 +246,7 @@ export default function LandingPage({ initialContent = defaultSiteContent, initi
       <SectionShell id="roadmap" eyebrow="roadmap" headline={section.roadmap.headline}>
         <div className="grid gap-4 md:grid-cols-3">
           {section.roadmap.phases.map((phase) => (
-            <article key={phase.title} className="rounded-2xl border border-white/10 bg-black/35 p-6 backdrop-blur-sm">
+            <article key={phase.title} className="rounded-2xl border border-white/10 bg-black/55 p-6 backdrop-blur-sm">
               <h3 className="text-xl font-semibold text-white">{phase.title}</h3>
               <ul className="mt-6 space-y-3">
                 {phase.items.map((item) => (
@@ -259,30 +277,33 @@ export default function LandingPage({ initialContent = defaultSiteContent, initi
               <p className="mt-1 text-xs text-white/50">We&apos;ll reach out when SolWear is ready.</p>
             </div>
           ) : (
-            <form onSubmit={submitWaitlist} className="mt-9 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
-                className="focus-ring min-h-12 w-full max-w-xs rounded-full border border-white/15 bg-white/[0.06] px-5 text-sm text-white placeholder-white/30 outline-none backdrop-blur-sm transition focus:border-white/35 sm:w-auto"
-              />
-              <button
-                type="submit"
-                disabled={waitlistStatus === "pending"}
-                className="focus-ring inline-flex min-h-12 items-center justify-center rounded-full bg-white px-7 text-sm font-semibold text-black transition hover:bg-white/90 disabled:opacity-60"
-              >
-                {waitlistStatus === "pending" ? "Joining…" : section.finalCta.primaryButton}
-              </button>
-              <a
-                href={content.links.xHref}
-                target="_blank"
-                rel="noreferrer"
-                className="focus-ring inline-flex min-h-12 items-center justify-center rounded-full border border-white/15 px-7 text-sm font-semibold text-white/82 transition hover:border-white/35 hover:text-white"
-              >
-                {section.finalCta.secondaryButton}
-              </a>
+            <form onSubmit={submitWaitlist} className="mt-9 flex flex-col items-center gap-3">
+              <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  className="focus-ring min-h-12 w-full max-w-xs rounded-full border border-white/15 bg-white/[0.06] px-5 text-sm text-white placeholder-white/30 outline-none backdrop-blur-sm transition focus:border-white/35 sm:w-auto"
+                />
+                <button
+                  type="submit"
+                  disabled={waitlistStatus === "pending"}
+                  className="focus-ring inline-flex min-h-12 items-center justify-center rounded-full bg-white px-7 text-sm font-semibold text-black transition hover:bg-white/90 disabled:opacity-60"
+                >
+                  {waitlistStatus === "pending" ? "Joining…" : section.finalCta.primaryButton}
+                </button>
+                <a
+                  href={content.links.xHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="focus-ring inline-flex min-h-12 items-center justify-center rounded-full border border-white/15 px-7 text-sm font-semibold text-white/82 transition hover:border-white/35 hover:text-white"
+                >
+                  {section.finalCta.secondaryButton}
+                </a>
+              </div>
+              {TURNSTILE_SITE_KEY && <div ref={turnstileRef} className="mt-2" />}
             </form>
           )}
           {waitlistStatus === "error" && (

@@ -3,7 +3,7 @@ import FooterUser from "./FooterUser";
 
 export default function Footer() {
   return (
-    <footer className="border-t border-white/10 bg-black/40 px-6 py-10 backdrop-blur-md">
+    <footer className="border-t border-white/10 bg-black/60 px-6 py-10 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 md:flex-row">
         <div className="flex items-center gap-2 text-white/80">
           <Image src="/solwear-logo-white.webp" alt="SolWear" width={18} height={18} />

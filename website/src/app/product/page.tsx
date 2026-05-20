@@ -46,7 +46,7 @@ function Sidebar({ active, onPick }: { active: number; onPick: (i: number) => vo
 // ── Shared card ────────────────────────────────────────────────────────────────
 function Card({ title, text }: { title: string; text: string }) {
   return (
-    <article className="rounded-2xl border border-white/10 bg-black/35 p-5 backdrop-blur-sm">
+    <article className="rounded-2xl border border-white/10 bg-black/55 p-5 backdrop-blur-sm">
       <div className="mb-4 h-px w-8 bg-white/40" />
       <h4 className="text-sm font-semibold text-white">{title}</h4>
       <p className="mt-2 text-xs leading-5 text-white/55">{text}</p>

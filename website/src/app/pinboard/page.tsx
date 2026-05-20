@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Script from "next/script";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 
@@ -80,11 +81,10 @@ export default function PinboardPage() {
   const PAGE_SIZE = 50;
 
   const boardIdeas = ideas.length ? ideas : (dynamicEnabled ? [] : previewIdeas);
-  const canPost = dynamicEnabled && !!user && user.followsSolWear && quota.remaining > 0;
+  const canPost = dynamicEnabled && !!user && quota.remaining > 0;
   const boardTitle = useMemo(() => {
     if (!dynamicEnabled) return "Preview board";
-    if (!user) return "Sign in to pin";
-    if (!user.followsSolWear) return "Follow SolWear first";
+    if (!user) return "Sign in to post";
     if (quota.remaining <= 0) return "Idea limit reached";
     return `${quota.remaining}/${maxIdeas} pins left`;
   }, [maxIdeas, quota.remaining, user]);
@@ -92,8 +92,8 @@ export default function PinboardPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const auth = params.get("auth");
-    if (auth === "ok") setAuthBanner("Signed in - you can now pin your idea.");
-    else if (auth === "follow") setAuthBanner("Signed in - follow @SolWear_ to unlock pinning.");
+    if (auth === "ok") setAuthBanner("Signed in — you can now share your idea.");
+    else if (auth === "follow") setAuthBanner("Signed in successfully.");
     else if (auth === "failed") {
       const reason = params.get("reason");
       setAuthBanner(`Sign in failed${reason ? ` (${reason})` : ""} - please try again.`);
@@ -178,6 +178,7 @@ export default function PinboardPage() {
       setStatus("Refresh the page before posting.");
       return;
     }
+    const turnstileToken = (e.currentTarget.querySelector("[name=cf-turnstile-response]") as HTMLInputElement | null)?.value ?? "";
     setPending(true);
     setStatus(null);
     try {
@@ -187,7 +188,7 @@ export default function PinboardPage() {
           "Content-Type": "application/json",
           "x-csrf-token": csrfToken,
         },
-        body: JSON.stringify({ idea }),
+        body: JSON.stringify({ idea, turnstile: turnstileToken }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not submit idea");
@@ -259,6 +260,9 @@ export default function PinboardPage() {
 
   return (
     <>
+      {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && (
+        <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="lazyOnload" />
+      )}
       <Nav />
       <main className="min-h-screen px-6 pb-24 pt-28">
         {authBanner && (
@@ -279,7 +283,7 @@ export default function PinboardPage() {
             <div>
               <h1 className="text-4xl font-bold md:text-6xl">SolWear community</h1>
               <p className="mt-5 max-w-2xl text-sm leading-7 text-white/58">
-                A live board for follower ideas. Sign in with X, follow @SolWear_, then pin your idea.
+                A live board for community ideas. Sign in with X and share what you want to see in SolWear.
               </p>
             </div>
             <div className="text-sm text-white/58 md:text-right">
@@ -422,13 +426,17 @@ export default function PinboardPage() {
         <button
           type="button"
           onClick={() => {
+            if (dynamicEnabled && !user) {
+              window.location.href = "/api/auth/x1/start/?returnTo=/pinboard/";
+              return;
+            }
             setStatus(null);
             setComposerOpen(true);
           }}
-          disabled={dynamicEnabled && !canPost}
+          disabled={dynamicEnabled && !!user && !canPost}
           className="focus-ring fixed bottom-6 right-6 flex h-14 w-14 items-center justify-center rounded-full bg-white text-3xl leading-none text-black shadow-[0_18px_40px_rgba(0,0,0,0.35)] disabled:cursor-not-allowed disabled:opacity-45"
           aria-label="Add idea"
-          title={dynamicEnabled && !canPost ? boardTitle : "Add idea"}
+          title={dynamicEnabled && !user ? "Sign in to post" : (dynamicEnabled && !canPost ? boardTitle : "Add idea")}
         >
           +
         </button>
@@ -459,6 +467,16 @@ export default function PinboardPage() {
                 <span>{quota.remaining}/{maxIdeas} pins left</span>
                 <span>{idea.length}/240</span>
               </div>
+              {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && (
+                <div className="mt-4 flex justify-center">
+                  <div
+                    className="cf-turnstile"
+                    data-sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+                    data-theme="dark"
+                    data-size="compact"
+                  />
+                </div>
+              )}
               <button
                 type="submit"
                 disabled={pending || !canPost}

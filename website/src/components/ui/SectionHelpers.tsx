@@ -74,7 +74,7 @@ export function CardGrid({ cards, columns = "md:grid-cols-3" }: { cards: CopyCar
       {cards.map((card, index) => (
         <article
           key={`${card.title}-${index}`}
-          className="group rounded-2xl border border-white/10 bg-black/35 p-6 shadow-2xl shadow-black/20 backdrop-blur-sm transition duration-300 hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.06] card-fade-in"
+          className="group rounded-2xl border border-white/10 bg-black/55 p-6 shadow-2xl shadow-black/20 backdrop-blur-sm transition duration-300 hover:-translate-y-1 hover:border-white/20 hover:bg-black/45 card-fade-in"
           style={{ animationDelay: `${index * 60}ms` }}
         >
           <div className="mb-6 h-px w-12 bg-white/40" />
