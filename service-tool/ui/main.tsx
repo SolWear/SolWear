@@ -4,7 +4,7 @@ import { Activity, Bug, Cpu, HardDriveDownload, Play, Search, Send, Settings, Te
 import "./styles.css";
 
 const logs = [
-  "[BOOT] SolWearOS v0.2.0-rust.0 proto=prototype-2-esp32s3-lcd13",
+  "[BOOT] SolWearOS v1.5R proto=prototype-2-esp32s3-lcd13",
   "[HAL] display init st7789 240x240 spi_mode=3 invert=1 dma=1",
   "[STATUS] batt=67 volt=3.81 heap=196608 uptime=3 charging=0 caps=status,nfc,battery",
   "[RESULT] topic=clock status=ok message=\"synced\"",

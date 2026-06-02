@@ -124,6 +124,6 @@ fn doctor() -> anyhow::Result<()> {
     println!("solwear_st doctor");
     println!("rust/cargo: run `cargo --version`");
     println!("serial devices: {}", detect_devices()?.len());
-    println!("required firmware protocol: SolWearOS v0.2.0-rust.0 or compatible");
+    println!("required firmware protocol: SolWearOS v1.5R or compatible");
     Ok(())
 }
