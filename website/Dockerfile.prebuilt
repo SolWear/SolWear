@@ -1,0 +1,16 @@
+FROM node:20-alpine AS runner
+RUN apk add --no-cache python3 make g++ libc6-compat
+WORKDIR /app
+ENV NODE_ENV=production
+ENV SOLWEAR_DATA_DIR=/data
+ENV PORT=3000
+RUN addgroup -S solwear && adduser -S solwear -G solwear \
+    && mkdir -p /data && chown -R solwear:solwear /data
+COPY package.json package-lock.json* ./
+RUN npm ci --no-audit --no-fund && chown -R solwear:solwear /app/node_modules
+COPY --chown=solwear:solwear public ./public
+COPY --chown=solwear:solwear .next ./.next
+USER solwear
+EXPOSE 3000
+VOLUME ["/data"]
+CMD ["npm", "run", "start"]
