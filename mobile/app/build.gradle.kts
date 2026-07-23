@@ -37,6 +37,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     packaging {
         resources {
@@ -72,6 +73,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
 
     implementation(libs.bouncycastle)
+    implementation(libs.androidx.security.crypto)
 
     // Test
     testImplementation(libs.junit)

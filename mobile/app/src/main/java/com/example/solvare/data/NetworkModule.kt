@@ -4,6 +4,7 @@ import com.example.solvare.data.price.PriceApi
 import com.example.solvare.data.price.PriceRepository
 import com.example.solvare.data.solana.SolanaRepository
 import com.example.solvare.data.solana.SolanaRpcApi
+import com.example.solvare.BuildConfig
 import kotlinx.serialization.json.Json
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
@@ -72,9 +73,13 @@ object NetworkModule {
         OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
-            .addInterceptor(HttpLoggingInterceptor().apply {
-                level = HttpLoggingInterceptor.Level.BODY
-            })
+            .apply {
+                if (BuildConfig.DEBUG) {
+                    addInterceptor(HttpLoggingInterceptor().apply {
+                        level = HttpLoggingInterceptor.Level.BODY
+                    })
+                }
+            }
             .addInterceptor(rewriteResponseBodyInterceptor)
             .build()
     }

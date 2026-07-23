@@ -3,6 +3,8 @@ package com.example.solvare.terminal.crypto
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Base64
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import com.example.solvare.util.Base58
 import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters
 import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters
@@ -11,8 +13,18 @@ import java.security.SecureRandom
 
 class TerminalKeyManager(context: Context) {
 
-    private val prefs: SharedPreferences =
-        context.getSharedPreferences("solvare_wallet_keys", Context.MODE_PRIVATE)
+    private val prefs: SharedPreferences = run {
+        val masterKey = MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+        EncryptedSharedPreferences.create(
+            context,
+            "solwear_wallet_keys",
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    }
 
     private var privateKey: Ed25519PrivateKeyParameters? = null
     private var publicKey: Ed25519PublicKeyParameters? = null
