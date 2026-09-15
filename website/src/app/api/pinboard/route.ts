@@ -3,6 +3,7 @@ import { db } from "@/lib/server/db";
 import { rateLimit } from "@/lib/server/rateLimit";
 import { createCsrfToken, getSession, verifyCsrfToken } from "@/lib/server/session";
 import { verifyTurnstile } from "@/lib/server/turnstile";
+import { getCommunityUser } from "@/lib/server/community";
 
 export const runtime = "nodejs";
 
@@ -51,12 +52,14 @@ function sameOrigin(request: NextRequest): boolean {
 
 export async function GET(request: NextRequest) {
   const session = getSession(request);
+  const member = session ? getCommunityUser(session.id) : null;
+  const activeSession = session && (session.isAdmin || member?.status === "active") ? session : null;
   const offset = parseInt(request.nextUrl.searchParams.get("offset") ?? "0", 10) || 0;
   const tab = request.nextUrl.searchParams.get("tab");
   const sort = request.nextUrl.searchParams.get("sort");
   const limit = Math.min(parseInt(request.nextUrl.searchParams.get("limit") ?? "50", 10) || 50, 50);
 
-  const userId = session?.id ?? "";
+  const userId = activeSession?.id ?? "";
   const voteJoin = `
     LEFT JOIN (SELECT idea_id, COUNT(*) AS votes FROM idea_votes GROUP BY idea_id) v ON p.id = v.idea_id
     LEFT JOIN (SELECT idea_id FROM idea_votes WHERE x_user_id = ?) uv ON p.id = uv.idea_id
@@ -70,7 +73,7 @@ export async function GET(request: NextRequest) {
     ideas = db()
       .prepare(`SELECT ${selectCols} FROM pinboard_ideas p ${voteJoin} WHERE p.status = 'approved' AND COALESCE(v.votes,0) > 0 ORDER BY ${order} LIMIT ?`)
       .all(userId, limit) as IdeaRow[];
-  } else if (session?.isAdmin) {
+  } else if (activeSession?.isAdmin) {
     ideas = db()
       .prepare(`SELECT ${selectCols} FROM pinboard_ideas p ${voteJoin} ORDER BY ${order} LIMIT ${limit} OFFSET ?`)
       .all(userId, offset) as IdeaRow[];
@@ -84,13 +87,13 @@ export async function GET(request: NextRequest) {
       .all(userId, offset) as IdeaRow[];
   }
 
-  const quota = session ? accountStats(session.id, session.isAdmin) : { submitted: 0, remaining: 0 };
+  const quota = activeSession ? accountStats(activeSession.id, activeSession.isAdmin) : { submitted: 0, remaining: 0 };
   const ideasOut = ideas.map((i) => ({ ...i, userVoted: Boolean(i.userVoted) }));
   return NextResponse.json({
-    user: session,
+    user: activeSession,
     ideas: ideasOut,
     quota,
-    csrfToken: session ? createCsrfToken(session) : null,
+    csrfToken: activeSession ? createCsrfToken(activeSession) : null,
     maxIdeasPerAccount: MAX_IDEAS_PER_X_ACCOUNT,
   });
 }
@@ -98,6 +101,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const session = getSession(request);
   if (!session) return NextResponse.json({ error: "Sign in with X first" }, { status: 401 });
+  const member = getCommunityUser(session.id);
+  if (!session.isAdmin && member?.status !== "active") {
+    return NextResponse.json({ error: "Community account is not active" }, { status: 403 });
+  }
   if (!sameOrigin(request)) {
     return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
   }

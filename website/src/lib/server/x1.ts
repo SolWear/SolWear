@@ -69,7 +69,9 @@ export async function getRequestToken(callbackUrl: string): Promise<{ token: str
   const params = new URLSearchParams(await res.text());
   const token = params.get("oauth_token");
   const tokenSecret = params.get("oauth_token_secret");
-  if (!token || !tokenSecret) throw new Error("request_token_missing_fields");
+  if (!token || !tokenSecret || params.get("oauth_callback_confirmed") !== "true") {
+    throw new Error("request_token_missing_fields");
+  }
   return { token, tokenSecret };
 }
 
@@ -118,4 +120,24 @@ export async function getAccessToken(
     throw new Error("access_token_missing_fields");
   }
   return { accessToken, accessTokenSecret, userId, screenName };
+}
+
+/** Best-effort profile enrichment; login still works when the app tier cannot access this endpoint. */
+export async function getUserProfile(
+  accessToken: string,
+  accessTokenSecret: string,
+): Promise<{ profileImageUrl?: string } | null> {
+  const consumerKey = requiredEnv("X_API_KEY");
+  const consumerSecret = requiredEnv("X_API_SECRET");
+  const url = "https://api.twitter.com/1.1/account/verify_credentials.json";
+  const res = await fetch(url, {
+    headers: { Authorization: authHeader("GET", url, consumerKey, consumerSecret, {}, accessToken, accessTokenSecret) },
+  });
+  if (!res.ok) {
+    console.warn("[x1/oauth] profile lookup unavailable", { status: res.status });
+    return null;
+  }
+  const data = (await res.json()) as { profile_image_url_https?: string };
+  const profileImageUrl = data.profile_image_url_https;
+  return profileImageUrl?.startsWith("https://") ? { profileImageUrl } : {};
 }

@@ -1,11 +1,14 @@
+import crypto from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/server/db";
-import { getSession } from "@/lib/server/session";
+import { requireAdmin, requireAdminMutation } from "@/lib/server/admin";
+import { rateLimit } from "@/lib/server/rateLimit";
 
 export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
-  if (!isAdmin(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const denied = authorize(request, false);
+  if (denied) return denied;
   const ideas = db()
     .prepare("SELECT id, username, idea, status, created_at FROM pinboard_ideas ORDER BY id DESC LIMIT 200")
     .all();
@@ -13,7 +16,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!isAdmin(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const denied = authorize(request, true);
+  if (denied) return denied;
   const body = (await request.json().catch(() => null)) as {
     id?: number;
     status?: string;
@@ -39,15 +43,29 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  if (!isAdmin(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const denied = authorize(request, true);
+  if (denied) return denied;
   const body = (await request.json().catch(() => null)) as { id?: number } | null;
   if (!body?.id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
   db().prepare("DELETE FROM pinboard_ideas WHERE id = ?").run(body.id);
   return NextResponse.json({ success: true });
 }
 
-function isAdmin(request: NextRequest): boolean {
-  const token = process.env.PINBOARD_ADMIN_TOKEN;
-  const session = getSession(request);
-  return Boolean(session?.isAdmin || (token && request.headers.get("x-admin-token") === token));
+function validApiToken(request: NextRequest): boolean {
+  const expected = process.env.PINBOARD_ADMIN_TOKEN?.trim();
+  const supplied = request.headers.get("x-admin-token") ?? "";
+  if (!expected || !supplied) return false;
+  const a = Buffer.from(expected);
+  const b = Buffer.from(supplied);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+function authorize(request: NextRequest, mutation: boolean): NextResponse | null {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+  if (!rateLimit(`admin-pinboard:${ip}`, 120, 10 * 60 * 1000)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+  if (validApiToken(request)) return null;
+  const { response } = mutation ? requireAdminMutation(request) : requireAdmin(request);
+  return response;
 }

@@ -1,37 +1,28 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  content: [
-    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
-  ],
+  content: ["./src/components/**/*.{ts,tsx}", "./src/app/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        solwear: {
-          bg: "#0d0d0d",
-          red: "#e0000f",
-          muted: "#666666",
+        ink: {
+          DEFAULT: "#ededE8",
+          dim: "rgba(237,237,232,0.55)",
+          faint: "rgba(237,237,232,0.5)",
         },
+        line: {
+          DEFAULT: "rgba(237,237,232,0.12)",
+          strong: "rgba(237,237,232,0.28)",
+        },
+        ground: { DEFAULT: "#050505", raised: "#0b0b0b" },
+        red: { sw: "#e0000f" },
       },
       fontFamily: {
-        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+        display: ["var(--font-archivo)", "system-ui", "sans-serif"],
+        sans: ["var(--font-archivo)", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
       },
-      keyframes: {
-        "pulse-red": {
-          "0%, 100%": { boxShadow: "0 0 0 0 rgba(224,0,15,0.7)" },
-          "50%": { boxShadow: "0 0 0 10px rgba(224,0,15,0)" },
-        },
-        "fade-up": {
-          "0%": { opacity: "0", transform: "translateY(24px)" },
-          "100%": { opacity: "1", transform: "translateY(0)" },
-        },
-      },
-      animation: {
-        "pulse-red": "pulse-red 2s ease-in-out infinite",
-        "fade-up": "fade-up 0.6s ease-out both",
-      },
+      maxWidth: { shell: "82rem" },
     },
   },
   plugins: [],

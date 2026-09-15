@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { clearOAuthX1Cookie, getOAuthX1Cookie, setSession } from "@/lib/server/session";
-import { getAccessToken } from "@/lib/server/x1";
-import { saveAdminToken } from "@/lib/server/xAdmin";
+import { getAccessToken, getUserProfile } from "@/lib/server/x1";
+import { touchCommunityUser } from "@/lib/server/community";
 
 export const runtime = "nodejs";
 
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
   const denied = url.searchParams.get("denied");
 
   const cookie = getOAuthX1Cookie(request);
-  const returnTo = cookie?.returnTo ?? "/pinboard/";
+  const returnTo = cookie?.returnTo ?? "/community/";
   const base = baseUrl(request);
 
   if (denied || !oauthToken || !oauthVerifier || !cookie) {
@@ -45,20 +45,25 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const { accessToken, userId, screenName } = await getAccessToken(
+    const { accessToken, accessTokenSecret, userId, screenName } = await getAccessToken(
       cookie.requestToken,
       cookie.requestTokenSecret,
       oauthVerifier,
     );
 
     const isAdmin = userId === process.env.SOLWEAR_X_USER_ID;
-    if (isAdmin) saveAdminToken(accessToken);
+    const profile = await getUserProfile(accessToken, accessTokenSecret).catch(() => null);
+
+    // One community record per X account — upserted, never duplicated.
+    touchCommunityUser(userId, screenName, isAdmin);
 
     const response = NextResponse.redirect(`${base}${returnTo}?auth=ok`);
     setSession(response, {
       id: userId,
       username: screenName,
-      followsSolWear: true,
+      avatarUrl: profile?.profileImageUrl,
+      // OAuth authenticates identity; it does not prove that the account follows SolWear.
+      followsSolWear: false,
       isAdmin,
     });
     clearOAuthX1Cookie(response);

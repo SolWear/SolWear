@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/server/db";
-import { getSession } from "@/lib/server/session";
+import { requireAdminMutation } from "@/lib/server/admin";
 
 export const runtime = "nodejs";
 
@@ -23,8 +23,8 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const session = getSession(request);
-  if (!session?.isAdmin) return NextResponse.json({ error: "Admin only" }, { status: 401 });
+  const { response } = requireAdminMutation(request);
+  if (response) return response;
 
   const body = (await request.json().catch(() => null)) as {
     title?: string;

@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/server/db";
-import { getSession } from "@/lib/server/session";
+import { requireAdminMutation } from "@/lib/server/admin";
 
 export const runtime = "nodejs";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: NextRequest, { params }: Ctx): Promise<NextResponse> {
-  const session = getSession(request);
-  if (!session?.isAdmin) return NextResponse.json({ error: "Admin only" }, { status: 401 });
+  const { response } = requireAdminMutation(request);
+  if (response) return response;
 
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
@@ -33,8 +33,8 @@ export async function PATCH(request: NextRequest, { params }: Ctx): Promise<Next
 }
 
 export async function DELETE(request: NextRequest, { params }: Ctx): Promise<NextResponse> {
-  const session = getSession(request);
-  if (!session?.isAdmin) return NextResponse.json({ error: "Admin only" }, { status: 401 });
+  const { response } = requireAdminMutation(request);
+  if (response) return response;
 
   const { id } = await params;
   db().prepare("DELETE FROM achievements WHERE id = ?").run(id);

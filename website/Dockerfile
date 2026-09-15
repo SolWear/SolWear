@@ -8,6 +8,12 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# NEXT_PUBLIC_* values are inlined into the client bundle at build time, and
+# .dockerignore keeps .env out of the build context — so it must come in as an
+# ARG. Without it the Turnstile widget never renders and every waitlist
+# submission is rejected by the server.
+ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY=""
+ENV NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY
 RUN npm run build
 
 FROM node:20-alpine AS runner
@@ -21,6 +27,7 @@ COPY --from=builder --chown=solwear:solwear /app/public ./public
 COPY --from=builder --chown=solwear:solwear /app/.next ./.next
 COPY --from=builder --chown=solwear:solwear /app/node_modules ./node_modules
 COPY --from=builder --chown=solwear:solwear /app/package.json ./package.json
+COPY --from=builder --chown=solwear:solwear /app/src/content ./src/content
 USER solwear
 EXPOSE 3000
 VOLUME ["/data"]

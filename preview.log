@@ -1,0 +1,74 @@
+   ▲ Next.js 15.5.18
+   - Local:        http://127.0.0.1:3010
+   - Network:      http://127.0.0.1:3010
+   - Environments: .env
+
+ ✓ Starting...
+ ✓ Ready in 10.1s
+ ○ Compiling /middleware ...
+ ✓ Compiled /middleware in 843ms (115 modules)
+ ○ Compiling /preview ...
+ ✓ Compiled /preview in 16s (700 modules)
+ GET /preview/ 200 in 17813ms
+ GET / 200 in 17878ms
+ ○ Compiling /preview/refined ...
+ ✓ Compiled /preview/refined in 4.6s (699 modules)
+ GET /preview/refined/ 200 in 5620ms
+ ○ Compiling /preview/mono ...
+ ✓ Compiled /preview/mono in 1330ms (706 modules)
+ GET /preview/mono/ 200 in 4561ms
+ ⚠ Cross origin request detected from 209.38.33.250 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ GET / 200 in 453ms
+ GET / 200 in 430ms
+ GET / 200 in 282ms
+ GET / 200 in 315ms
+ GET / 200 in 2307ms
+ GET / 200 in 279ms
+ ✓ Compiled in 8.6s (750 modules)
+ ✓ Compiled in 1880ms (285 modules)
+ ○ Compiling /preview/product ...
+ ✓ Compiled /preview/product in 4.4s (661 modules)
+ GET /preview/product/ 200 in 8204ms
+ GET /preview/product/ 200 in 335ms
+ ✓ Compiled in 3.7s (762 modules)
+ ✓ Compiled in 2.1s (287 modules)
+ ○ Compiling /preview/admin ...
+ ✓ Compiled /preview/admin in 5.1s (668 modules)
+ GET /preview/admin/ 200 in 7701ms
+ GET /preview/admin/ 200 in 409ms
+ ○ Compiling /preview ...
+ ✓ Compiled /preview in 4.6s (433 modules)
+ GET /preview/ 200 in 6834ms
+ ○ Compiling /preview/refined ...
+ ✓ Compiled /preview/refined in 1245ms (440 modules)
+ GET /preview/refined/ 200 in 2133ms
+ ○ Compiling /preview/mono ...
+ ✓ Compiled /preview/mono in 672ms (445 modules)
+ GET /preview/mono/ 200 in 1700ms
+ GET /preview/product/ 200 in 217ms
+ GET /preview/admin/ 200 in 216ms
+ GET /preview/admin/ 200 in 1864ms
+ GET /preview/product/ 200 in 646ms
+ GET /preview/ 200 in 808ms
+ GET /preview/ 200 in 419ms
+ GET /preview/ 200 in 217ms
+ GET /preview/refined/ 200 in 255ms
+ GET /preview/mono/ 200 in 288ms
+ GET / 200 in 364ms
+ ○ Compiling /pitch ...
+ ✓ Compiled /product in 6.9s (736 modules)
+ GET /product/ 200 in 4910ms
+ GET /product/ 200 in 259ms
+ GET /pitch/ 200 in 226ms
+ GET / 200 in 564ms
+ GET /preview/refined/ 200 in 221ms
+ GET /product/ 200 in 345ms
+ GET / 200 in 229ms
+ ○ Compiling /admin ...
+ ✓ Compiled /admin in 4s (687 modules)
+ GET /admin/ 307 in 4918ms
+ GET / 200 in 214ms
+ ○ Compiling /cheremsha ...
+ ✓ Compiled /cheremsha in 2s (695 modules)
+ GET /cheremsha/ 200 in 3560ms

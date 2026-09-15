@@ -7,7 +7,3 @@ export function requiredEnv(name: string): string {
 export function dataDir(): string {
   return process.env.SOLWEAR_DATA_DIR || "/data";
 }
-
-export function publicDynamicEnabled(): boolean {
-  return process.env.NEXT_PUBLIC_SOLWEAR_DYNAMIC === "1";
-}

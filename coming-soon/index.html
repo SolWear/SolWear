@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SolWear — Building</title>
+<meta name="robots" content="noindex, nofollow" />
+<meta name="description" content="SolWear is being rebuilt. Back soon." />
+<link rel="icon" href="/coming-soon/solwear-logo-white.webp" type="image/webp" />
+<style>
+  @font-face {
+    font-family: "Playfair Display";
+    font-style: normal;
+    font-weight: 500 700;
+    font-display: swap;
+    src: url("/coming-soon/fonts/playfair-500-700.woff2") format("woff2");
+  }
+  @font-face {
+    font-family: "Playfair Display";
+    font-style: italic;
+    font-weight: 600;
+    font-display: swap;
+    src: url("/coming-soon/fonts/playfair-600-italic.woff2") format("woff2");
+  }
+  :root {
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Playfair Display", "Times New Roman", Georgia, serif;
+  }
+  canvas#bg {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+  }
+  #word {
+    position: relative;
+    z-index: 1;
+    font-size: clamp(0.9rem, 1.5vw, 1.15rem);
+    font-style: italic;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: #141414;
+    animation: fadeUp 1.1s ease-out both;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #word { animation: none; }
+  }
+</style>
+</head>
+<body>
+  <canvas id="bg" aria-hidden="true"></canvas>
+
+  <span id="word">Building</span>
+
+  <script>
+    // Rotating word — one random pick per page load, independently for every visitor.
+    (function () {
+      var words = [
+        "Building",
+        "In Progress",
+        "Under Construction",
+        "In The Works",
+        "Brewing",
+        "Almost There",
+        "Building Something New",
+        "Cooking",
+        "Loading",
+        "Refining",
+        "Reworking",
+        "Rebuilding",
+        "Polishing",
+        "Assembling",
+        "Constructing",
+        "Crafting",
+        "Forging Ahead",
+        "Shaping Up",
+        "Taking Shape",
+        "Work In Progress",
+        "Coming Together",
+        "Getting There",
+        "On It",
+        "In Motion",
+        "In Development",
+        "Iterating",
+        "Prototyping",
+        "Sketching Ideas",
+        "Laying The Groundwork",
+        "Under The Hood",
+        "Behind The Scenes",
+        "Making Progress",
+        "Leveling Up",
+        "Recharging",
+        "Rebooting",
+        "Reimagining",
+        "Redesigning",
+        "Engineering",
+        "Wiring Things Up",
+        "Tuning",
+        "Calibrating",
+        "Booting Up",
+        "Compiling",
+        "Deploying Soon",
+        "Version Next",
+        "Next Chapter",
+        "Back Soon"
+      ];
+      var el = document.getElementById("word");
+      el.textContent = words[Math.floor(Math.random() * words.length)];
+    })();
+  </script>
+
+  <script>
+    // Full, unmodified port of src/components/BlocksBackground.tsx (the live
+    // site's actual mouse/touch-reactive block background) — same grid,
+    // spring physics, and ripple-wave behavior. Only the palette is adapted
+    // from dark-bg to white-bg (fill color + block/gradient tuning).
+    (function () {
+      var canvas = document.getElementById("bg");
+      var wordEl = document.getElementById("word");
+      var ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      // Capped at 1: these are tiny soft-edged blocks and blurred gradients,
+      // retina sharpness buys nothing here but quadratic fill cost hurts a lot.
+      var DPR = 1;
+      var FRAME_INTERVAL = 1000 / 30; // throttle to ~30fps; this loop now runs
+                                       // continuously once touched, so halving
+                                       // its rate matters a lot on weak devices.
+
+      var CELL = 20, BLOCK = 5, RADIUS = 100, STRENGTH = 18, SPRING = 0.055, DAMP = 0.70;
+      var TEXT_STRENGTH = 26;
+
+      var W = 0, H = 0, mx = -9999, my = -9999, rafId = 0, running = false, bgTime = 0, lastFrame = 0;
+      var bgTickId = null;
+      var waves = [];
+      var grid = [];
+      var textPoint = { x: -9999, y: -9999, r: 0 };
+
+      function updateTextPoint() {
+        if (!wordEl) return;
+        var rect = wordEl.getBoundingClientRect();
+        textPoint.x = rect.left + rect.width / 2;
+        textPoint.y = rect.top + rect.height / 2;
+        textPoint.r = Math.max(rect.width, rect.height) / 2 + 70;
+      }
+
+      function buildGrid() {
+        grid = [];
+        var cols = Math.ceil(W / CELL) + 3;
+        var rows = Math.ceil(H / CELL) + 3;
+        for (var r = 0; r < rows; r++) {
+          for (var c = 0; c < cols; c++) {
+            var s = Math.abs(Math.sin(r * 127.1 + c * 311.7) * 43758.5453) % 1;
+            var s2 = Math.abs(Math.sin(r * 55.3 + c * 179.5) * 12345.6) % 1;
+            var isBlack = s2 >= 0.5;
+            grid.push({
+              ox: c * CELL - 3, oy: r * CELL - 3,
+              dx: 0, dy: 0, vx: 0, vy: 0,
+              a: 0.10 + s * 0.10,
+              hue: 355 + s2 * 8,
+              light: isBlack ? 10 + s * 8 : 42 + s * 10,
+              sat: isBlack ? 15 : 70,
+              phase: s * Math.PI * 2
+            });
+          }
+        }
+      }
+
+      function fillGradientBox(x, y, r, stops) {
+        // Only fill the gradient's own bounding box instead of the whole
+        // canvas — well outside r it's fully transparent anyway.
+        var g = ctx.createRadialGradient(x, y, 0, x, y, r);
+        for (var i = 0; i < stops.length; i++) g.addColorStop(stops[i][0], stops[i][1]);
+        ctx.fillStyle = g;
+        ctx.fillRect(
+          Math.max(0, x - r), Math.max(0, y - r),
+          Math.min(W, x + r) - Math.max(0, x - r),
+          Math.min(H, y + r) - Math.max(0, y - r)
+        );
+      }
+
+      function drawBg(t) {
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, W, H);
+
+        var g1x = W * (0.08 + Math.sin(t * 0.12) * 0.15);
+        var g1y = H * (0.10 + Math.cos(t * 0.09) * 0.12);
+        var g1r = W * (0.65 + Math.sin(t * 0.15) * 0.12);
+        fillGradientBox(g1x, g1y, g1r, [
+          [0, "rgba(10,10,10,0.10)"],
+          [0.5, "rgba(10,10,10,0.03)"],
+          [1, "rgba(255,255,255,0)"]
+        ]);
+
+        var g2x = W * (0.88 + Math.cos(t * 0.08) * 0.12);
+        var g2y = H * (0.82 + Math.sin(t * 0.11) * 0.15);
+        var g2r = W * (0.55 + Math.cos(t * 0.13) * 0.10);
+        fillGradientBox(g2x, g2y, g2r, [
+          [0, "rgba(224,0,15,0.10)"],
+          [0.45, "rgba(224,0,15,0.03)"],
+          [1, "rgba(255,255,255,0)"]
+        ]);
+      }
+
+      function drawStatic() {
+        drawBg(bgTime);
+        for (var i = 0; i < grid.length; i++) {
+          var b = grid[i];
+          ctx.fillStyle = "hsla(" + b.hue + "," + b.sat + "%," + b.light + "%," + b.a + ")";
+          ctx.fillRect(b.ox + b.dx, b.oy + b.dy, BLOCK, BLOCK);
+        }
+      }
+
+      function frame(now) {
+        rafId = requestAnimationFrame(frame);
+        if (now - lastFrame < FRAME_INTERVAL) return;
+        lastFrame = now;
+
+        drawBg(bgTime);
+        var live = false;
+        var t = now * 0.001;
+        var activeWaves = [];
+        for (var j = 0; j < waves.length; j++) {
+          if ((now - waves[j].born) / 1000 <= 8) activeWaves.push(waves[j]);
+        }
+        waves = activeWaves;
+
+        for (var i = 0; i < grid.length; i++) {
+          var b = grid[i];
+          var cx = b.ox + b.dx + BLOCK / 2;
+          var cy = b.oy + b.dy + BLOCK / 2;
+
+          // Cheap bounding-box check before any sqrt — most blocks are far
+          // from every active point at any given moment, so this skips the
+          // expensive distance math for the vast majority of them.
+          var ddx = cx - mx, ddy = cy - my;
+          if (ddx > -RADIUS && ddx < RADIUS && ddy > -RADIUS && ddy < RADIUS) {
+            var dist = Math.sqrt(ddx * ddx + ddy * ddy);
+            if (dist < RADIUS && dist > 0) {
+              var force = (1 - dist / RADIUS) * STRENGTH;
+              b.vx += (ddx / dist) * force * 0.22;
+              b.vy += (ddy / dist) * force * 0.22;
+            }
+          }
+
+          var tdx = cx - textPoint.x, tdy = cy - textPoint.y;
+          if (tdx > -textPoint.r && tdx < textPoint.r && tdy > -textPoint.r && tdy < textPoint.r) {
+            var tdist = Math.sqrt(tdx * tdx + tdy * tdy);
+            if (tdist < textPoint.r && tdist > 0) {
+              var tforce = (1 - tdist / textPoint.r) * TEXT_STRENGTH;
+              b.vx += (tdx / tdist) * tforce * 0.22;
+              b.vy += (tdy / tdist) * tforce * 0.22;
+            }
+          }
+
+          for (var k = 0; k < waves.length; k++) {
+            var w = waves[k];
+            var wx = cx - w.x, wy = cy - w.y;
+            // No spatial cutoff here on purpose — this ripple is meant to
+            // expand across the entire screen over its lifetime (the phase
+            // term below moves the wavefront outward as dt grows), not just
+            // affect a small bubble around the origin.
+            var wd = Math.sqrt(wx * wx + wy * wy);
+            if (wd < 2) continue;
+            var dt = (now - w.born) / 1000;
+            var ripple = Math.sin(wd * 0.045 - dt * 5) * Math.exp(-dt * 0.35) * 14;
+            b.vx += (wx / wd) * ripple * 0.15;
+            b.vy += (wy / wd) * ripple * 0.15;
+          }
+
+          b.vx += -b.dx * SPRING;
+          b.vy += -b.dy * SPRING;
+          b.vx *= DAMP;
+          b.vy *= DAMP;
+          b.dx += b.vx;
+          b.dy += b.vy;
+          if (Math.abs(b.dx) > 0.04 || Math.abs(b.dy) > 0.04) live = true;
+
+          var pulsedAlpha = b.a + Math.sin(t * 0.4 + b.phase) * 0.02;
+          ctx.fillStyle = "hsla(" + b.hue + "," + b.sat + "%," + b.light + "%," + pulsedAlpha + ")";
+          ctx.fillRect(b.ox + b.dx, b.oy + b.dy, BLOCK, BLOCK);
+        }
+
+        if (!(live || mx > -500 || waves.length > 0)) {
+          cancelAnimationFrame(rafId);
+          running = false;
+          rafId = 0;
+        }
+      }
+
+      function startLoop() {
+        if (!running && !reduced) {
+          running = true;
+          rafId = requestAnimationFrame(frame);
+        }
+      }
+
+      function bgTick() {
+        bgTime += 1 / 15;
+        if (!running) drawStatic();
+        bgTickId = setTimeout(bgTick, 1000 / 15);
+      }
+
+      function resize() {
+        W = window.innerWidth;
+        H = window.innerHeight;
+        canvas.width = Math.floor(W * DPR);
+        canvas.height = Math.floor(H * DPR);
+        canvas.style.width = W + "px";
+        canvas.style.height = H + "px";
+        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+        buildGrid();
+        updateTextPoint();
+      }
+
+      var onResize = function () { resize(); drawStatic(); };
+
+      var onMouse = function (e) {
+        var prevMx = mx, prevMy = my;
+        mx = e.clientX;
+        my = e.clientY;
+        if (Math.abs(mx - prevMx) + Math.abs(my - prevMy) > 8) {
+          if (waves.length < 10) waves.push({ x: mx, y: my, born: performance.now() });
+        }
+        startLoop();
+      };
+
+      // Mouse/touch position is intentionally never reset — the last point
+      // stays as a permanent repulsion point, same as the text.
+      var onLeave = function () {};
+
+      var onTouch = function (e) {
+        var t = e.touches[0];
+        if (!t) return;
+        mx = t.clientX;
+        my = t.clientY;
+        if (waves.length < 10) waves.push({ x: mx, y: my, born: performance.now() });
+        startLoop();
+      };
+
+      var onTouchEnd = function () {};
+
+      resize();
+      bgTick();
+      window.addEventListener("resize", onResize);
+      window.addEventListener("mousemove", onMouse);
+      window.addEventListener("mouseleave", onLeave);
+      window.addEventListener("touchmove", onTouch, { passive: true });
+      window.addEventListener("touchend", onTouchEnd, { passive: true });
+      window.addEventListener("touchcancel", onTouchEnd, { passive: true });
+
+      drawStatic();
+      startLoop(); // run once on load so blocks settle clear of the text immediately
+    })();
+  </script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/server/admin";
+import { requireAdmin, requireAdminMutation } from "@/lib/server/admin";
 import { deleteSponsorLogo, getSponsorLogos, upsertSponsorLogo } from "@/lib/server/siteContent";
 
 export const runtime = "nodejs";
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const { response } = requireAdmin(request);
+  const { response } = requireAdminMutation(request);
   if (response) return response;
 
   const body = (await request.json().catch(() => null)) as {
