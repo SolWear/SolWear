@@ -1,0 +1,30 @@
+{
+  "name": "@solwear/emulator-host",
+  "version": "0.1.0",
+  "description": "The fast PC simulator: the real shell and app bundle against a mock HAL, in a desktop window.",
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "bin": {
+    "solwear-emulator": "bin/solwear-emulator.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "web",
+    "shell",
+    "profiles",
+    "README.md"
+  ],
+  "scripts": {
+    "start": "node bin/solwear-emulator.mjs",
+    "test": "node --test test/*.test.mjs",
+    "bundle-shell": "node scripts/bundle-shell.mjs",
+    "prepublishOnly": "node scripts/bundle-shell.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "solwear",
+  "version": "0.1.0",
+  "description": "Build SolWear apps and contribute to SolWear OS: a skill for the app developer loop (scaffold, build, run in the emulator, package, sign, publish) plus the Architect and Reviewer workflow commands for the monorepo.",
+  "author": {
+    "name": "SolWear",
+    "url": "https://solwear.tech"
+  },
+  "homepage": "https://solwear.tech",
+  "repository": "https://github.com/SolWear/SolWear_OS",
+  "license": "Apache-2.0",
+  "keywords": [
+    "solwear",
+    "wearable",
+    "solana",
+    "sdk"
+  ]
+}

@@ -1,0 +1,104 @@
+name: Publish (npm)
+
+# Publishes the three public npm packages — @solwear/sdk, @solwear/emulator-host
+# and @solwear/cli — from CI, so a release never depends on a token pasted into
+# someone's terminal. Authentication is an npm *automation* token stored once as
+# the NPM_TOKEN repository secret (npmjs.com -> Access Tokens -> Granular, scope
+# @solwear, "bypass 2FA" enabled). Each publish is signed with provenance.
+#
+# It is deliberately manual (workflow_dispatch) and idempotent: a package whose
+# current version is already on the registry is skipped, so re-running is safe.
+# To release, bump the version in the package's package.json, merge, then run
+# this workflow.
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: "Which package(s) to publish"
+        type: choice
+        default: all
+        options:
+          - all
+          - "@solwear/sdk"
+          - "@solwear/emulator-host"
+          - "@solwear/cli"
+      dry_run:
+        description: "Pack and check only, do not publish"
+        type: boolean
+        default: false
+
+# id-token: write is required for npm provenance.
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: publish-npm
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Build, test and publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          registry-url: "https://registry.npmjs.org"
+
+      # The SDK is a dependency of every scaffolded app; the emulator bundles
+      # the OS shell at publish time and the CLI depends on the emulator, so the
+      # publish order is fixed: sdk -> emulator-host -> cli.
+      - name: Build and test @solwear/sdk
+        run: npm ci --no-audit --no-fund && npm test
+        working-directory: sdk/runtime
+
+      - name: Build and test the OS shell
+        run: npm ci --no-audit --no-fund && npm run build
+        working-directory: os/shell
+
+      - name: Test @solwear/emulator-host
+        run: npm test
+        working-directory: emulator/host
+
+      - name: Build and test @solwear/cli
+        run: npm ci --no-audit --no-fund && npm test
+        working-directory: sdk/cli
+
+      - name: Publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          SELECTED: ${{ inputs.package }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+
+          # Publish one package unless its current version is already live, or
+          # it was not the one selected. In dry-run mode, pack instead.
+          publish() {
+            local name="$1" dir="$2"
+            if [[ "$SELECTED" != "all" && "$SELECTED" != "$name" ]]; then
+              echo "· $name — not selected, skipping"
+              return
+            fi
+            local version
+            version="$(node -p "require('./$dir/package.json').version")"
+            if npm view "$name@$version" version >/dev/null 2>&1; then
+              echo "· $name@$version — already on the registry, skipping"
+              return
+            fi
+            if [[ "$DRY_RUN" == "true" ]]; then
+              echo "· $name@$version — dry run (npm pack)"
+              ( cd "$dir" && npm pack --dry-run )
+              return
+            fi
+            echo "· $name@$version — publishing"
+            ( cd "$dir" && npm publish --provenance --access public )
+          }
+
+          publish "@solwear/sdk" "sdk/runtime"
+          publish "@solwear/emulator-host" "emulator/host"
+          publish "@solwear/cli" "sdk/cli"

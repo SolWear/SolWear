@@ -1,5 +1,23 @@
 # Update Log
 
+## 2026-09-22 - Mirror the SolWear OS Linux platform
+
+Mirrored the full [SolWear_OS](https://github.com/SolWear/SolWear_OS) tree into
+`solwear-os/` so this umbrella repository now contains the Raspberry-Pi Linux
+platform alongside the ESP32 firmware, mobile companion, website and service
+tool.
+
+### SolWear OS platform (`solwear-os/`)
+
+- The system daemon, OS shell, SDK (`@solwear/sdk`), command-line tool
+  (`@solwear/cli`), host emulator (`@solwear/emulator-host`), app store registry
+  and example apps.
+- The host emulator now bundles the OS shell, so `solwear run` works from a
+  plain `npm install --global @solwear/cli` with no monorepo checkout.
+- The SolWear Claude Code plugin (`solwear-os/plugins/solwear`) and its
+  marketplace manifest, also published at
+  [SolWear/SolWear-Claude-Plugin](https://github.com/SolWear/SolWear-Claude-Plugin).
+
 ## 2026-05-20 - Prototype V2 OS and Mobile NFC Update
 
 This update keeps SolWear focused on Prototype V2 hardware. Prototype V3 hardware work is intentionally paused, so the firmware and mobile companion now lean harder into what the current device can do well.

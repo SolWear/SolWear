@@ -1,0 +1,16 @@
+{
+  "id": "tech.solwear.signer",
+  "name": "SolWear Signer",
+  "version": "0.2.0",
+  "sdk": "0.1",
+  "type": "app",
+  "entry": "index.html",
+  "capabilities": [
+    "system",
+    "wallet",
+    "nfc",
+    "notifications"
+  ],
+  "author": "SolWear",
+  "description": "Demonstrates wearer-confirmed Solana message signing."
+}

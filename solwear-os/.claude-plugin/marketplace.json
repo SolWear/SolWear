@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "solwear",
+  "owner": {
+    "name": "SolWear",
+    "url": "https://solwear.tech"
+  },
+  "metadata": {
+    "description": "Claude Code plugins for building SolWear apps and contributing to SolWear OS.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "solwear",
+      "source": "./plugins/solwear",
+      "description": "Build SolWear apps (scaffold, build, run in the emulator, package, sign, publish) and contribute to SolWear OS (Architect and Reviewer workflow commands)."
+    }
+  ]
+}
